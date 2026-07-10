@@ -78,6 +78,13 @@ export interface AssetTypeFieldDef {
   options?: string[];
 }
 
+export interface AssetTypeRoleDef {
+  key: string;
+  label_en: string;
+  label_pt: string;
+  label_es: string;
+}
+
 export interface AssetTypeRow {
   id: string;
   key: string;
@@ -87,6 +94,7 @@ export interface AssetTypeRow {
   label_es: string;
   icon: string;
   fields: AssetTypeFieldDef[];
+  roles: AssetTypeRoleDef[];
   created_at: string;
   updated_at: string;
 }
@@ -95,6 +103,8 @@ export interface AssetRow {
   id: string;
   workspace_id: string;
   asset_type_id: string;
+  architecture_id: string | null;
+  role: string | null;
   name: string;
   description: string | null;
   status: AssetStatus;
@@ -196,6 +206,43 @@ export interface AuditLogRow {
   before: Record<string, unknown> | null;
   after: Record<string, unknown> | null;
   created_at: string;
+}
+
+export interface OperationalArchitectureRow {
+  id: string;
+  workspace_id: string;
+  name: string;
+  description: string | null;
+  country: string | null;
+  product: string | null;
+  environment: 'production' | 'testing' | 'recovery';
+  objective: string | null;
+  status: 'active' | 'inactive' | 'archived';
+  continuity_score: number;
+  health_score: number;
+  created_at: string;
+  updated_at: string;
+  last_audit_at: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+}
+
+export interface ChecklistItem {
+  key: string;
+  label: string;
+  done: boolean;
+  done_at: string | null;
+}
+
+export interface ChecklistRow {
+  id: string;
+  workspace_id: string;
+  architecture_id: string | null;
+  title: string;
+  items: ChecklistItem[];
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
 }
 
 export interface Database {

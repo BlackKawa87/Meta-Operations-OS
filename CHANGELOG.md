@@ -2,6 +2,42 @@
 
 All notable changes to Meta Operations OS are documented here. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased] — CORTEX
+
+### Design (approved, not yet implemented)
+- `ARCHITECTURE.md` §22 documents **CORTEX**, the decision-making brain that consumes Contingency Core: Mission/Goal/Context/Strategy/Decision/Checklist/Validation/Knowledge Engines, organized around Missions rather than isolated event→response.
+- Key design decision: a system-detected problem is a Mission (`origin: system`, `goal: recovery`), not a separate `incidents` table.
+- Key design decision: Contingency Core owns structural/graph knowledge; CORTEX owns decisions and calls into Contingency Core for context, rather than maintaining its own view of the asset graph.
+- No code, migrations, or UI for this domain yet — pending explicit go-ahead before implementation begins.
+
+## [0.2.0] - 2026-07-10 — "Contingency Core"
+
+Second module implemented in full: **Contingency Core**, answering the platform's core question — "if any asset disappeared today, would the operation keep running?" — with real, deterministic, rule-based engines (no LLM calls anywhere in this module).
+
+### Added — Database
+- Migration `20250101000010_contingency_core.sql`: `operational_architectures` table (name/description/country/product/environment/objective/status/continuity_score/health_score/last_audit_at), `checklists` table (`architecture_id` nullable FK, `items` jsonb `{key,label,done,done_at}`).
+- `assets` gained `architecture_id` (nullable FK) and `role` (nullable text); `asset_types` gained `roles` (jsonb catalog), seeded for the 7 core types: Business Manager, Pixel, Ad Account, Profile, Virtual Machine, Domain, Page.
+- `get_asset_impact(p_asset_id, p_max_depth)`: recursive SQL function for the real Relationship/Impact Engine — unlimited depth, bidirectional, cycle-safe via a `visited` array.
+- RLS policies added for both new tables (dormant, per Single Operator Mode conventions), written idempotently (`drop ... if exists` guards on triggers/policies) so the migration is safely re-runnable.
+
+### Added — API
+- `GET/POST /api/architectures`, `GET/PATCH /api/architectures/[id]`.
+- `GET /api/architectures/[id]/continuity` — runs the Continuity/Health/SPOF/Recovery-Readiness engines and persists the results back onto the architecture row.
+- `GET /api/architectures/[id]/map` — nodes/edges for the Contingency Map.
+- `GET/POST /api/architectures/[id]/checklist`, `PATCH /api/checklists/[id]/items/[key]`.
+- `GET /api/assets/[id]/impact` — blast radius via `get_asset_impact()`, enriched with affected-asset detail and campaign/product/no-backup counts.
+- `GET /api/assets/[id]/recovery-plan` — combines the Impact Engine with an auto-generated, ordered Recovery Plan.
+
+### Added — Frontend
+- `src/lib/contingency.ts`: pure, rule-based engines — `computeContinuity`, `computeArchitectureHealth`, `computeRecoveryReadiness`, `generateRecoveryPlan` — same determinism philosophy as `src/lib/scoring.ts`.
+- `src/hooks/useArchitectures.ts`: `useArchitectures`, `useContinuity`, `useArchitectureMap`, `useChecklists`, `useFailureSimulation`.
+- `src/pages/contingency/ContingencyCore.tsx` at new route `/contingency`, nav item in the Sidebar: architecture list + create modal, 4 tabs (Overview with scores/SPOF/readiness, Contingency Map, Failure Simulator, Checklist).
+- `src/components/assets/AssetForm.tsx` gained Operational Architecture and Operational Role fields (role options filtered by the selected asset type's `roles` catalog).
+- All new `contingency.*` and `assets.form.architecture`/`assets.form.role` strings added to `en.json`/`pt.json`/`es.json` in the same change.
+
+### Fixed — found during migration apply, a real production bug
+- **`ERROR 42P19: recursive reference to query "impact" must not appear within its non-recursive term`** when first applying the migration: `get_asset_impact()`'s original recursive CTE had three `union all` branches (base case, outbound join, inbound join) — Postgres only allows a `with recursive` block exactly one non-recursive term followed by exactly one recursive term, and the left-associated three-way union made the second recursive reference appear inside what Postgres treated as the non-recursive term. Fixed by combining both directions into a single recursive term via `join lateral (... union all ...) x on true`. Documented the rule in `CLAUDE.md` ("Recursive CTEs: one recursive term only") to prevent recurrence. Also made all trigger/policy creation in the migration idempotent (`drop ... if exists` guards) so a full re-run after a partial failure is always safe.
+
 ## [0.1.0] - 2026-07-10 — "Foundation + Asset Manager"
 
 First official release. GitHub repository (`BlackKawa87/Meta-Operations-OS`) and Vercel project (`meta-operations-os`) created and connected; production deployment live at `https://meta-operations-os.vercel.app`; Supabase migrations applied to the production database.

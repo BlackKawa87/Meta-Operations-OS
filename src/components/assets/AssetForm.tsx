@@ -6,6 +6,7 @@ import { FieldWrapper, Input, Select, Textarea } from '@/components/ui/Field';
 import { ASSET_STATUSES, CRITICALITY_LEVELS } from '@/lib/validation/asset';
 import type { AssetTypeRow, AssetTypeFieldDef, Criticality, AssetStatus } from '@/types/database';
 import type { AssetDetail } from '@/hooks/useAsset';
+import { useArchitectures } from '@/hooks/useArchitectures';
 
 // Single Operator Mode: no owner/member picker — `owner_id` stays in the
 // data model (nullable) for when multi-user comes back, it's just not
@@ -18,6 +19,8 @@ export interface AssetFormValues {
   criticality: Criticality;
   attributes: Record<string, unknown>;
   tags: string[];
+  architecture_id: string | null;
+  role: string | null;
 }
 
 interface AssetFormProps {
@@ -43,6 +46,12 @@ function localizedTypeLabel(type: AssetTypeRow, locale: string): string {
   return type.label_en;
 }
 
+function localizedRoleLabel(role: AssetTypeRow['roles'][number], locale: string): string {
+  if (locale === 'pt') return role.label_pt;
+  if (locale === 'es') return role.label_es;
+  return role.label_en;
+}
+
 export function AssetForm({
   open, onClose, assetTypes, mode, initialAsset, submitting, errorMessage, onSubmit,
 }: AssetFormProps) {
@@ -55,6 +64,10 @@ export function AssetForm({
   const [criticality, setCriticality] = useState<Criticality>(initialAsset?.criticality ?? 'medium');
   const [tagsInput, setTagsInput] = useState((initialAsset?.tags ?? []).join(', '));
   const [attributes, setAttributes] = useState<Record<string, unknown>>(initialAsset?.attributes ?? {});
+  const [architectureId, setArchitectureId] = useState(initialAsset?.architecture_id ?? '');
+  const [role, setRole] = useState(initialAsset?.role ?? '');
+
+  const { architectures } = useArchitectures();
 
   const selectedType = useMemo(
     () => assetTypes.find((t2) => t2.id === assetTypeId) ?? initialAsset?.asset_types,
@@ -71,6 +84,8 @@ export function AssetForm({
       criticality,
       attributes,
       tags: tagsInput.split(',').map((t2) => t2.trim()).filter(Boolean),
+      architecture_id: architectureId || null,
+      role: role || null,
     });
   };
 
@@ -125,6 +140,30 @@ export function AssetForm({
         <FieldWrapper label={t('assets.form.tags')}>
           <Input value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder="tag1, tag2" />
         </FieldWrapper>
+
+        <div className="grid grid-cols-2 gap-3">
+          <FieldWrapper label={t('assets.form.architecture')}>
+            <Select value={architectureId} onChange={(e) => setArchitectureId(e.target.value)}>
+              <option value="">—</option>
+              {architectures.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </Select>
+          </FieldWrapper>
+
+          <FieldWrapper label={t('assets.form.role')}>
+            <Select value={role} onChange={(e) => setRole(e.target.value)} disabled={!selectedType || selectedType.roles.length === 0}>
+              <option value="">—</option>
+              {(selectedType?.roles ?? []).map((r) => (
+                <option key={r.key} value={r.key}>
+                  {localizedRoleLabel(r, i18n.language)}
+                </option>
+              ))}
+            </Select>
+          </FieldWrapper>
+        </div>
 
         {selectedType && selectedType.fields.length > 0 && (
           <div className="mt-2 border-t border-[var(--border-subtle)] pt-3">

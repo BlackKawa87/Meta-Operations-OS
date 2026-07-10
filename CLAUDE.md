@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-**Meta Operations OS** — an operational control system for Meta ecosystem assets (Business Managers, ad accounts, pixels, pages, profiles, VMs, proxies, etc.). Full target architecture and roadmap live in `ARCHITECTURE.md`. This repo currently implements the first module, **Asset Manager Engine**, running in **Single Operator Mode** (see below).
+**Meta Operations OS** — an operational control system for Meta ecosystem assets (Business Managers, ad accounts, pixels, pages, profiles, VMs, proxies, etc.). Full target architecture and roadmap live in `ARCHITECTURE.md`. This repo currently implements the first two modules, **Asset Manager Engine** and **Contingency Core**, running in **Single Operator Mode** (see below). **CORTEX** (the decision-making layer that consumes Contingency Core) is architecture-approved but not yet implemented — see `ARCHITECTURE.md` §22.
 
 ## Commands
 
@@ -55,9 +55,22 @@ Every operational entity (Pixel, Business Manager, Ad Account, VM, Proxy, ...) i
 
 `User`, `Team`, `Workspace` are **not** asset rows — they're tenancy entities. Don't add them to `asset_types`, even dormant.
 
-### Relationships are direct-only (no graph engine yet)
+### Relationships: direct edges in the Asset Manager, recursive traversal in Contingency Core
 
-`asset_relationships` is a directed graph edge table (`source_asset_id` → `target_asset_id`, typed by `relationship_type`). This module only exposes **direct** relationships (Asset Detail → Relationships tab). Recursive blast-radius traversal is the Relationship Engine, a later module — check `ARCHITECTURE.md` §20 before building that here.
+`asset_relationships` is a directed graph edge table (`source_asset_id` → `target_asset_id`, typed by `relationship_type`). The Asset Manager's own UI (Asset Detail → Relationships tab) only ever shows **direct** relationships — it never traverses. Recursive, unlimited-depth, bidirectional traversal lives exclusively in Contingency Core's `get_asset_impact()` SQL function (see below) — don't build ad hoc graph traversal anywhere else in the codebase.
+
+### Contingency Core (implemented) + CORTEX (architecture approved, not yet implemented)
+
+The platform's actual differentiator is answering "if any asset disappeared today, would the operation keep running?" — not asset CRUD.
+
+- **Contingency Core** (implemented, `ARCHITECTURE.md` §21) owns structural knowledge: `operational_architectures` (a named, coherent operation — "Arquitetura Brasil"), operational **roles** per asset (`asset_types.roles` catalog + `assets.role`, same data-driven pattern as `asset_types.fields` — e.g. a Business Manager is `vault` "BM Fortaleza" *or* `production`, never both), the real Relationship/Impact Engine (`get_asset_impact()`, recursive CTE via a single `join lateral` recursive term — see "Recursive CTEs" below), SPOF detection, Continuity/Health Score, Recovery Readiness, an auto-generated Recovery Plan, and the Checklist Engine. Pure rule-based logic lives in `src/lib/contingency.ts` (no LLM calls, same philosophy as `src/lib/scoring.ts`); routes live under `api/architectures/**` and `api/assets/[id]/impact.ts` / `recovery-plan.ts`; frontend is `src/pages/contingency/ContingencyCore.tsx` at `/contingency`.
+- **CORTEX** (not yet implemented) owns decision-making, organized around **Missions** (not isolated event→response) — Mission/Goal/Context/Strategy/Decision/Checklist/Validation/Knowledge Engines. A system-detected problem *is* a Mission (`origin: system`, `goal: recovery`), not a separate `incidents` table — don't reintroduce one.
+- Ownership split to remember: Contingency Core knows how the operation is structured; CORTEX decides what to do about it. CORTEX's (future) Context Engine calls into Contingency Core, never duplicates its graph/role logic.
+- Mission Control (new root route `/`) will replace the Asset Overview dashboard as the landing screen when CORTEX lands; Asset Overview moves to `/assets` in the nav at that point — do this rename when the module actually lands, not before.
+
+### Recursive CTEs: one recursive term only
+
+Postgres allows a `with recursive` block exactly one non-recursive term followed by exactly one recursive term. A naive bidirectional traversal written as `base UNION ALL (...join cte...) UNION ALL (...join cte...)` — three branches — fails in production with `recursive reference to query "x" must not appear within its non-recursive term`, because the left-associated `(base UNION ALL branch1)` gets treated as the non-recursive term and `branch1`'s self-reference violates the rule. `get_asset_impact()` in `20250101000010_contingency_core.sql` combines both directions (`outbound`/`inbound`) into a single recursive term via `join lateral (... union all ...) x on true` — write any future bidirectional recursive query the same way.
 
 ### Scores recompute synchronously, not on a schedule
 
@@ -159,6 +172,9 @@ supabase/migrations/           numbered, sequential, applied in order by `supaba
 - Runtime: Node (`@vercel/node` types), one default-exported `handler(req, res)` per file.
 - No middleware chain — each handler is self-contained (methodGuard → service client → validate → do the thing → respond). If two routes need the exact same non-trivial logic, extract it to `api/_lib/`, don't build a middleware abstraction for two call sites.
 - Body size: default Vercel serverless body limit applies (~4.5MB); the one route that needs more headroom (`documents.ts`, base64 file uploads) sets `export const config = { api: { bodyParser: { sizeLimit: '5mb' } } }` explicitly — do the same for any future route handling inline file payloads.
+- **A dynamic segment file must be a sibling file, never `index.ts`**: `api/architectures/[id].ts` maps to `/api/architectures/:id`; `api/architectures/[id]/index.ts` does **not** map to the parent bare route the same way and silently breaks routing. Every nested dynamic route in this repo (`api/assets/[id].ts`, `api/architectures/[id].ts`, `api/checklists/[id]/items/[key].ts`) follows this; keep doing so.
+- Native ESM (`package.json` has `"type": "module"`): every relative import under `api/**`, including anything reaching into `src/`, needs an explicit `.js` extension (e.g. `import { computeContinuity } from '../../../src/lib/contingency.js'`) and must use a relative path, never the `@/` Vite-only alias — Vercel's per-function type-check doesn't resolve it.
+- `vercel.json`'s SPA fallback must exclude `/api/**` via a negative lookahead (`{"source":"/((?!api/).*)","destination":"/index.html"}`), not a naive `/(.*)` catch-all — a bare catch-all gets inserted before Vercel's auto-generated dynamic API routes and shadows every one of them. No separate `/api/(.*)` rewrite rule is needed; Vercel auto-routes functions.
 
 ## Supabase conventions
 

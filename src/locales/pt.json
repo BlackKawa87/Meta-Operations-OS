@@ -1,6 +1,6 @@
 {
   "app": { "name": "Meta Operations OS" },
-  "nav": { "overview": "Visão Geral de Ativos", "risk": "Visão de Risco", "settings": "Configurações" },
+  "nav": { "overview": "Visão Geral de Ativos", "risk": "Visão de Risco", "contingency": "Contingency Core", "settings": "Configurações" },
   "assets": {
     "title": "Ativos", "newAsset": "Novo Ativo", "searchPlaceholder": "Buscar ativos...",
     "empty": "Nenhum ativo ainda. Crie o primeiro para começar.",
@@ -8,7 +8,7 @@
     "filters": { "type": "Tipo", "status": "Status", "criticality": "Criticidade", "allTypes": "Todos os tipos", "allStatuses": "Todos os status", "allCriticality": "Todas as criticidades" },
     "summary": { "total": "Total de ativos", "active": "Ativos", "atRisk": "Em risco", "blocked": "Bloqueados", "noBackup": "Sem backup", "critical": "Críticos" },
     "table": { "name": "Nome", "type": "Tipo", "status": "Status", "criticality": "Criticidade", "health": "Saúde", "updated": "Atualizado" },
-    "form": { "name": "Nome", "description": "Descrição", "type": "Tipo de ativo", "status": "Status", "criticality": "Criticidade", "tags": "Tags", "save": "Salvar", "cancel": "Cancelar", "create": "Criar ativo", "selectType": "Selecione um tipo..." },
+    "form": { "name": "Nome", "description": "Descrição", "type": "Tipo de ativo", "status": "Status", "criticality": "Criticidade", "tags": "Tags", "save": "Salvar", "cancel": "Cancelar", "create": "Criar ativo", "selectType": "Selecione um tipo...", "architecture": "Arquitetura Operacional", "role": "Papel Operacional" },
     "detail": {
       "overview": "Visão Geral", "relationships": "Relacionamentos", "risk": "Risco e Scores", "notes": "Notas",
       "documents": "Documentos", "history": "Histórico", "events": "Eventos", "audit": "Auditoria",
@@ -25,5 +25,29 @@
     }
   },
   "settings": { "description": "Inventário de ativos, saúde e rastreamento de risco da sua operação." },
+  "contingency": {
+    "title": "Contingency Core",
+    "subtitle": "Estrutura operacional, dependências e prontidão de recuperação da sua operação.",
+    "newArchitecture": "Nova Arquitetura",
+    "architectures": "Arquiteturas",
+    "noArchitectures": "Nenhuma arquitetura operacional criada ainda.",
+    "selectArchitecture": "Selecione uma arquitetura para ver os detalhes.",
+    "tabs": { "overview": "Visão Geral", "map": "Mapa de Contingência", "simulator": "Simulador de Falha", "checklist": "Checklist" },
+    "form": { "name": "Nome", "description": "Descrição", "country": "País", "product": "Produto", "selectType": "Selecione um ativo..." },
+    "continuityScore": "Score de Continuidade",
+    "healthScore": "Score de Saúde",
+    "spofCount": "Pontos Únicos de Falha",
+    "readiness": "Prontidão de Recuperação",
+    "readinessLevels": { "ready": "Pronto", "partial": "Parcial", "critical": "Crítico", "insufficient": "Insuficiente" },
+    "spofDetector": "Detector de SPOF",
+    "noSpof": "Nenhum ponto único de falha detectado.",
+    "noAssetsInArchitecture": "Nenhum ativo vinculado a esta arquitetura ainda.",
+    "noBackupTag": "Sem backup",
+    "simulateFailure": "Simular Falha",
+    "impact": "Impacto",
+    "recoveryPlan": "Plano de Recuperação",
+    "generateChecklist": "Gerar Checklist Padrão",
+    "noChecklists": "Nenhum checklist criado ainda."
+  },
   "common": { "loading": "Carregando...", "error": "Algo deu errado.", "retry": "Tentar novamente", "save": "Salvar", "cancel": "Cancelar", "delete": "Excluir", "close": "Fechar" }
 }

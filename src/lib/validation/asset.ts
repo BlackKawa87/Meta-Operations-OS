@@ -28,6 +28,8 @@ export const createAssetSchema = z.object({
   criticality: z.enum(CRITICALITY_LEVELS).default('medium'),
   owner_id: z.string().uuid().optional().nullable(),
   team_id: z.string().uuid().optional().nullable(),
+  architecture_id: z.string().uuid().optional().nullable(),
+  role: z.string().max(50).optional().nullable(),
   attributes: z.record(z.string(), z.unknown()).default({}),
   tags: z.array(z.string().max(40)).max(20).default([]),
 });

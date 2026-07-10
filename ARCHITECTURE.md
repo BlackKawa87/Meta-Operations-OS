@@ -618,20 +618,154 @@ Setup do projeto (Vite + TS + Tailwind v4), projeto Supabase, schema de tenancy 
 **Fase 1 — Núcleo de Ativos ✅ concluída (Asset Manager Engine)**
 `assets` genérico + catálogo `asset_types` com schema de campos em JSONB (todos os 33 tipos de uma vez, não só os prioritários — ver desvio documentado em `CLAUDE.md`), Asset Manager (CRUD completo, dinâmico por tipo), Validation Engine (zod compartilhado front/back), Audit (trigger `SECURITY DEFINER` + `audit_logs`), Asset Risk View, scores calculados síncronamente. Import/Onboarding Engine (CSV) **não** foi implementado nesta fase — fica para quando houver demanda real de importação em massa.
 
-**Fase 2 — Grafo e Saúde (próximo módulo)**
-`asset_relationships` já existe e suporta relacionamento direto (preview básico, já entregue na Fase 1); falta o Relationship Engine de verdade — travessia recursiva (CTE) para blast radius — e o Health Engine como job agendado (hoje o score recalcula síncronamente a cada mutação, não em background). Dashboard v1 de saúde/risco já existe (Asset Overview + Asset Risk View).
+**Fase 2 — Contingency Core ✅ concluída**
+Operational Architecture (`operational_architectures`), papéis operacionais por tipo de ativo (`asset_types.roles` + `assets.role`), Relationship Engine de verdade (`get_asset_impact()`, CTE recursiva bidirecional via lateral join, não só preview direto), Impact Engine (blast radius real), SPOF Detector, Continuity Score + Health Score por arquitetura, Recovery Readiness, Recovery Plan gerado, Checklist Engine, área de frontend "Contingency Core" (`/contingency`). Ver seção 21.
 
-**Fase 3 — Incidentes e Recuperação**
-Incident Engine (ciclo de vida completo), Playbook Engine (CRUD + execução), Recovery Engine (sugestão baseada em tipo + blast radius), Notifications (Realtime + e-mail), Automation Engine (regras simples evento→ação).
+**Fase 3 — CORTEX (arquitetura aprovada, implementação pendente)**
+Mission Engine + Goal/Context/Strategy/Decision/Checklist/Validation/Knowledge Engines, orientado a Missões (não mais a "evento → resposta" isolado). Mission Control substitui o Dashboard como tela raiz. Ver seção 22.
 
-**Fase 4 — Conhecimento e IA**
-Document Center (Storage + Markdown), `pgvector` + embeddings, AI Copilot v1 (RAG sobre knowledge base + estado do grafo), refinamento do Health Engine com base em incidentes reais acumulados.
+**Fase 4 — Conhecimento e IA avançada**
+`pgvector` + embeddings sobre a Knowledge Base acumulada pelo CORTEX, refinamento do Decision Engine com base em missões reais concluídas, Notifications (Realtime/e-mail) para missões críticas.
 
 **Fase 5 — Ativos restantes, Reports e Hardening**
-Tipos de ativo remanescentes (VM, Browser, Proxy, VPN, Verification, Payment Method, Creative, Landing Page, Audience, Conversion), Reports & Analytics, revisão de performance (índices, cache de blast radius, connection pooling), revisão de segurança completa (RLS audit, Vault, rate limiting), permissões customizadas por empresa.
+Reports & Analytics, revisão de performance (índices, cache de blast radius, connection pooling), revisão de segurança completa (RLS audit, Vault, rate limiting), permissões customizadas por empresa.
 
 **Fase 6 — Escala e Integrações**
 Integração real com Meta Graph API (leitura de status de ativos), API pública documentada, read replicas se justificado por volume, expansão de automação (regras compostas), observabilidade externa se necessário.
+
+---
+
+## 21. Contingency Core ✅ implementado
+
+### 21.1 Visão
+
+O diferencial da plataforma não é gerenciar ativos individuais — é garantir **continuidade operacional**. A pergunta que todo o módulo existe para responder, continuamente:
+
+> *"Se qualquer ativo desta operação deixar de existir hoje, a operação continuará funcionando?"*
+
+Isso exige um conceito que não existia até aqui: ativos isolados (um Pixel, uma BM, uma Conta) não representam nada sozinhos — o que tem valor é **como estão organizados uns em relação aos outros**. Essa organização passa a ser modelada explicitamente.
+
+### 21.2 Operational Architecture
+
+Nova entidade, acima de `Asset`: uma **Operational Architecture** representa uma operação completa e coerente (ex.: "Arquitetura Brasil", uma por país/produto/vertical). Cada ativo pertence a, no máximo, uma arquitetura operacional (`assets.architecture_id`, nullable — nem todo ativo precisa estar associado a uma arquitetura formal desde o primeiro dia).
+
+```
+Arquitetura Brasil
+ └─ VM Vault → Perfis Administradores → BM Fortaleza → Pixel Master
+                                              ↓ (compartilha para)
+                                        BM Produção → Conta Principal → Campanhas → Criativos → Landing Pages → Produtos
+```
+
+Uma arquitetura tem um **Continuity Score** agregado (0-100), calculado a partir da cobertura de backup e redundância dos seus ativos-núcleo (BMs, Pixels, Contas, Perfis, VMs, Domínios) — não dos ativos de campanha, que são consequência, não causa, da continuidade.
+
+### 21.3 Papéis Operacionais (Asset Roles)
+
+Todo ativo dos tipos-núcleo ganha um **papel operacional**, além do tipo. O papel é o que o Contingency Core e o CORTEX usam para decidir — não o tipo puro. Segue o mesmo padrão já usado para `asset_types.fields` (catálogo dirigido por dados, não uma tabela por combinação tipo×papel): `asset_types` ganha uma coluna `roles` (jsonb, lista de papéis válidos para aquele tipo), e `assets` ganha uma coluna `role` (text, nullable, validado contra `asset_types.roles` na camada de aplicação).
+
+| Tipo | Papéis válidos |
+|---|---|
+| Business Manager | `vault` (Fortaleza), `production`, `backup`, `recovery`, `testing` |
+| Pixel | `master`, `operational`, `backup`, `testing` |
+| Ad Account | `primary`, `secondary`, `backup`, `standby` |
+| Profile | `owner`, `administrator`, `advertiser`, `backup` |
+| Virtual Machine | `vault`, `production`, `recovery`, `testing` |
+| Domain | `primary`, `backup`, `testing` |
+| Page (Facebook) | `primary`, `backup` |
+
+### 21.4 BM Fortaleza vs. BM Produção
+
+Distinção central do modelo, expressa via `role` em ativos do tipo Business Manager:
+
+- **BM Fortaleza** (`role: vault`) — não anuncia. Contém Pixels, Públicos, compartilhamentos e Perfis administradores. Função exclusiva: proteger a propriedade dos ativos críticos.
+- **BM Produção** (`role: production`) — recebe ativos *compartilhados* (não transferidos) da BM Fortaleza via `asset_relationships` (`relationship_type: shares_with`). Executa campanhas, criativos, contas, operação do dia a dia. **Pode ser substituída sem perda de patrimônio**, porque o patrimônio real (Pixel, dados, aprendizado) nunca sai da Fortaleza.
+
+### 21.5 O Pixel como maior patrimônio
+
+Um Pixel com `role: master` concentra aprendizado de otimização, eventos históricos e públicos — é tratado como o ativo de maior valor da arquitetura, não como "mais um ativo". Regra de negócio permanente do Contingency Core: **todo Pixel com `role: master` deve ter no mínimo um Pixel `role: backup` associado via relacionamento `backup_for`**; a ausência disso é sempre a primeira linha do relatório de continuidade, independentemente de qualquer outro cálculo de score.
+
+### 21.6 Perguntas de continuidade (contrato do módulo)
+
+O Contingency Core existe para responder estas perguntas de forma determinística, sempre a partir de dados reais (nunca achismo):
+
+- Existe ponto único de falha (SPOF) nesta arquitetura?
+- Quantos backups existem para cada ativo-núcleo?
+- Se esta BM desaparecer, a operação continua?
+- Se este Perfil deixar de existir, quem assume (próximo `administrator`/`owner` disponível)?
+- Se esta Conta for perdida, qual `backup`/`standby` deve substituí-la?
+- Este Pixel `master` está protegido (tem `backup`)?
+- Existe redundância suficiente nesta arquitetura?
+- Quanto tempo levaria pra restaurar (soma dos tempos estimados dos passos necessários)?
+- Qual ativo representa o maior risco hoje (cruza `role` crítico + ausência de backup + alta criticidade)?
+
+### 21.7 Componentes técnicos do módulo (implementados)
+
+- **Relationship/Impact Engine** — `get_asset_impact(p_asset_id, p_max_depth)`, função SQL recursiva em `supabase/migrations/20250101000010_contingency_core.sql`. Trafega `asset_relationships` nas duas direções via um único termo recursivo com `join lateral` (Postgres não permite mais de um termo recursivo num mesmo `with recursive` — a versão inicial com três `union all` foi rejeitada em produção e corrigida para esse formato). Exposta via `POST supabase.rpc('get_asset_impact', ...)`, chamada por `api/assets/[id]/impact.ts` e `api/assets/[id]/recovery-plan.ts`.
+- **SPOF Detector, Continuity Score, Health Score, Recovery Readiness** — funções puras e determinísticas em `src/lib/contingency.ts` (`computeContinuity`, `computeArchitectureHealth`, `computeRecoveryReadiness`), mesmo padrão de `src/lib/scoring.ts`: nenhuma chamada a LLM, tudo explicável a partir de `role`/`status`/`criticality`/`backup_coverage` reais.
+- **Recovery Plan Generator** — `generateRecoveryPlan()` em `src/lib/contingency.ts`, consome o Impact Engine (dependentes) e gera passos ordenados com tempo estimado.
+- **Checklist Engine** — tabela `checklists` (`architecture_id` nullable, `items` jsonb `{key,label,done,done_at}`), template padrão de 10 itens gerado por `POST /api/architectures/[id]/checklist` quando o corpo vem vazio.
+- **APIs**: `GET/POST /api/architectures`, `GET/PATCH /api/architectures/[id]`, `GET /api/architectures/[id]/continuity` (persiste `continuity_score`/`health_score`/`last_audit_at` a cada chamada), `GET /api/architectures/[id]/map` (nodes/edges para o Contingency Map), `GET/POST /api/architectures/[id]/checklist`, `PATCH /api/checklists/[id]/items/[key]`, `GET /api/assets/[id]/impact`, `GET /api/assets/[id]/recovery-plan`.
+- **Frontend**: `src/pages/contingency/ContingencyCore.tsx`, rota `/contingency`, 4 abas (Overview, Mapa de Contingência, Simulador de Falha, Checklist) consolidando as 10 áreas do prompt original; hooks em `src/hooks/useArchitectures.ts`.
+
+## 22. CORTEX — Camada de Decisão
+
+CORTEX continua sendo o cérebro operacional da plataforma, mas suas decisões **nascem do Contingency Core**: o Context Engine do CORTEX consulta o Contingency Core (arquitetura operacional, papéis, dependências, compartilhamentos, backups, continuidade) como fonte primária antes de qualquer análise. CORTEX decide o que fazer; Contingency Core sabe como a operação está estruturada.
+
+### 22.1 Filosofia: Missões, não eventos isolados
+
+O operador nunca executa ações soltas — ele inicia uma **Missão** (lançar produto, trocar BM, migrar Pixel, reduzir risco, auditar, recuperar). O próprio sistema também abre Missões sozinho quando detecta um problema (`origin: system`, `goal: recovery`) — um "incidente", nesta arquitetura, **é** uma Missão, não uma entidade paralela.
+
+### 22.2 Engines do CORTEX
+
+| Engine | Papel |
+|---|---|
+| **Mission Engine** | Cria, organiza, acompanha e finaliza Missões; dono da máquina de estados. |
+| **Goal Engine** | Classifica o objetivo do operador (texto livre → um dos goals fixos) via OpenAI (classificação estruturada, nunca geração de fatos). |
+| **Context Engine** | Monta o snapshot completo da situação — consulta o Contingency Core (arquitetura, papéis, SPOF, continuidade) + histórico + incidentes passados + documentação + conhecimento acumulado. Persistido em `missions.context_snapshot`. |
+| **Strategy Engine** | Gera de 2 a 4 estratégias candidatas (não decide), cada uma com vantagens, riscos, impacto, custo operacional e tempo estimado — sempre informado pelos papéis (ex.: nunca propor "recriar a BM Fortaleza" como estratégia de recuperação de rotina, pois isso destruiria patrimônio; propor troca de BM Produção sim). |
+| **Decision Engine** | Escolhe a estratégia recomendada entre as geradas, sempre justificando e apresentando as alternativas descartadas. |
+| **Checklist Engine** | Gera o checklist operacional a partir da estratégia decidida. |
+| **Validation Engine** | Confirma critérios reais de conclusão antes de fechar a Missão (nada é "concluído" sem validação). |
+| **Knowledge Engine** | Toda Missão concluída (sucesso ou falha) alimenta a base de conhecimento, retroalimentando o Context Engine em missões futuras. |
+
+### 22.3 Mission Control
+
+Tela raiz da plataforma (substitui o Dashboard/Asset Overview em `/`, que passa a viver em `/assets` na navegação): missões ativas, concluídas, críticas e em andamento; próxima ação recomendada; alertas; checklists; saúde e continuidade da operação; recomendações do CORTEX; campo de perguntas (Modo 2 — Assistente).
+
+### 22.4 Banco de dados (planejado, não implementado)
+
+```sql
+operational_architectures(id, workspace_id, name, description, continuity_score, created_at, updated_at)
+-- assets ganha: architecture_id (nullable fk), role (nullable text, validado contra asset_types.roles)
+-- asset_types ganha: roles jsonb (lista de papéis válidos por tipo)
+
+missions(id, workspace_id, title, goal, origin, status, primary_asset_id, context_snapshot jsonb, selected_strategy_id, created_at, started_at, completed_at)
+mission_assets(mission_id, asset_id, role)          -- role aqui = trigger|affected|candidate|target (papel NA missão, não o role operacional do ativo)
+mission_timeline(id, mission_id, event_type, note, actor, created_at)
+mission_strategies(id, mission_id, label, description, advantages jsonb, risks jsonb, impact_summary jsonb, operational_cost text, estimated_minutes int, is_recommended boolean, justification text)
+checklists(id, workspace_id, mission_id, title, items jsonb, created_at)
+playbooks(id, workspace_id, name, applies_to_goal, applies_to_asset_type, steps jsonb, is_active)
+copilot_conversations(id, workspace_id, mission_id nullable, title, created_at)
+copilot_messages(id, conversation_id, role, content, grounding jsonb, created_at)
+knowledge_entries(id, workspace_id, mission_id, decision_summary, result, duration_seconds, success boolean, lessons_learned, created_at)
+```
+
+### 22.5 APIs (planejadas, não implementadas)
+
+```
+GET  /api/architectures                    /api/architectures/[id]           → Operational Architecture CRUD
+GET  /api/architectures/[id]/continuity    → Continuity Score + SPOF + respostas às 9 perguntas (§21.6)
+GET  /api/assets/[id]/impact                → Impact Engine sob demanda
+GET/POST /api/missions   GET/PATCH /api/missions/[id]   POST /api/missions/[id]/timeline
+GET  /api/missions/[id]/strategies   POST /api/missions/[id]/decide
+POST /api/missions/[id]/checklist   PATCH /api/checklists/[id]/items/[key]
+POST /api/missions/[id]/validate   POST /api/missions/[id]/complete
+GET/POST /api/playbooks
+POST /api/cortex/goal   POST /api/cortex/ask   GET /api/cortex/mission-control
+```
+
+### 22.6 Impacto na arquitetura atual
+
+Nenhuma tabela do Asset Manager é alterada em sua semântica — `assets` só ganha duas colunas novas (`architecture_id`, `role`) e `asset_types` uma (`roles`), ambas nullable/aditivas. Único ponto de código existente tocado: `api/assets/[id]/status.ts` passa a poder abrir uma Missão de recuperação quando o novo status é problemático. Sidebar ganha reordenação de navegação (Mission Control como item principal, Asset Overview movido para `/assets`).
 
 ---
 

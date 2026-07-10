@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LayoutGrid, ShieldAlert, Settings } from 'lucide-react';
+import { LayoutGrid, ShieldAlert, Settings, Network } from 'lucide-react';
 
 const navItemClass = ({ isActive }: { isActive: boolean }) =>
   `flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
@@ -26,6 +26,9 @@ export function Sidebar() {
         </NavLink>
         <NavLink to="/risk" className={navItemClass}>
           <ShieldAlert className="h-4 w-4" /> {t('nav.risk')}
+        </NavLink>
+        <NavLink to="/contingency" className={navItemClass}>
+          <Network className="h-4 w-4" /> {t('nav.contingency')}
         </NavLink>
         <NavLink to="/settings" className={navItemClass}>
           <Settings className="h-4 w-4" /> {t('nav.settings')}
