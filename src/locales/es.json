@@ -1,0 +1,29 @@
+{
+  "app": { "name": "Meta Operations OS" },
+  "nav": { "overview": "Resumen de Activos", "risk": "Vista de Riesgo", "settings": "Configuración" },
+  "assets": {
+    "title": "Activos", "newAsset": "Nuevo Activo", "searchPlaceholder": "Buscar activos...",
+    "empty": "Aún no hay activos. Crea el primero para empezar.",
+    "loading": "Cargando activos...", "error": "No se pudieron cargar los activos.",
+    "filters": { "type": "Tipo", "status": "Estado", "criticality": "Criticidad", "allTypes": "Todos los tipos", "allStatuses": "Todos los estados", "allCriticality": "Toda criticidad" },
+    "summary": { "total": "Total de activos", "active": "Activos", "atRisk": "En riesgo", "blocked": "Bloqueados", "noBackup": "Sin respaldo", "critical": "Críticos" },
+    "table": { "name": "Nombre", "type": "Tipo", "status": "Estado", "criticality": "Criticidad", "health": "Salud", "updated": "Actualizado" },
+    "form": { "name": "Nombre", "description": "Descripción", "type": "Tipo de activo", "status": "Estado", "criticality": "Criticidad", "tags": "Etiquetas", "save": "Guardar", "cancel": "Cancelar", "create": "Crear activo", "selectType": "Selecciona un tipo..." },
+    "detail": {
+      "overview": "Resumen", "relationships": "Relaciones", "risk": "Riesgo y Puntajes", "notes": "Notas",
+      "documents": "Documentos", "history": "Historial", "events": "Eventos", "audit": "Auditoría",
+      "healthScore": "Puntaje de salud", "riskScore": "Puntaje de riesgo", "recoveryScore": "Puntaje de recuperación", "backupCoverage": "Cobertura de respaldo",
+      "noRelationships": "Aún no hay relaciones registradas.", "addRelationship": "Agregar relación",
+      "noNotes": "Aún no hay notas.", "addNote": "Agregar nota", "noDocuments": "Aún no hay documentos.",
+      "noHistory": "No hay cambios de estado registrados.", "noEvents": "No hay eventos registrados.", "noAudit": "No hay entradas de auditoría.",
+      "changeStatus": "Cambiar estado", "edit": "Editar", "archive": "Archivar", "reason": "Motivo (opcional)"
+    },
+    "risk": {
+      "title": "Vista de Riesgo", "criticalNoBackup": "Activo crítico sin respaldo", "blockedActive": "Activo bloqueado/restringido aún en uso",
+      "noDocs": "Activo sin documentación", "noRelationships": "Activo sin relaciones",
+      "problematicStatus": "Activo con estado problemático", "empty": "No hay alertas de riesgo por ahora."
+    }
+  },
+  "settings": { "description": "Inventario de activos, salud y seguimiento de riesgo de tu operación." },
+  "common": { "loading": "Cargando...", "error": "Algo salió mal.", "retry": "Reintentar", "save": "Guardar", "cancel": "Cancelar", "delete": "Eliminar", "close": "Cerrar" }
+}

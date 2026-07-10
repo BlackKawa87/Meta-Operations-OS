@@ -1,0 +1,29 @@
+{
+  "app": { "name": "Meta Operations OS" },
+  "nav": { "overview": "Asset Overview", "risk": "Risk View", "settings": "Settings" },
+  "assets": {
+    "title": "Assets", "newAsset": "New Asset", "searchPlaceholder": "Search assets...",
+    "empty": "No assets yet. Create your first one to get started.",
+    "loading": "Loading assets...", "error": "Could not load assets.",
+    "filters": { "type": "Type", "status": "Status", "criticality": "Criticality", "allTypes": "All types", "allStatuses": "All statuses", "allCriticality": "All criticality" },
+    "summary": { "total": "Total assets", "active": "Active", "atRisk": "At risk", "blocked": "Blocked", "noBackup": "No backup", "critical": "Critical" },
+    "table": { "name": "Name", "type": "Type", "status": "Status", "criticality": "Criticality", "health": "Health", "updated": "Updated" },
+    "form": { "name": "Name", "description": "Description", "type": "Asset type", "status": "Status", "criticality": "Criticality", "tags": "Tags", "save": "Save", "cancel": "Cancel", "create": "Create asset", "selectType": "Select a type..." },
+    "detail": {
+      "overview": "Overview", "relationships": "Relationships", "risk": "Risk & Scores", "notes": "Notes",
+      "documents": "Documents", "history": "History", "events": "Events", "audit": "Audit",
+      "healthScore": "Health score", "riskScore": "Risk score", "recoveryScore": "Recovery score", "backupCoverage": "Backup coverage",
+      "noRelationships": "No relationships recorded yet.", "addRelationship": "Add relationship",
+      "noNotes": "No notes yet.", "addNote": "Add note", "noDocuments": "No documents yet.",
+      "noHistory": "No status changes recorded.", "noEvents": "No events recorded.", "noAudit": "No audit entries.",
+      "changeStatus": "Change status", "edit": "Edit", "archive": "Archive", "reason": "Reason (optional)"
+    },
+    "risk": {
+      "title": "Risk View", "criticalNoBackup": "Critical asset without backup", "blockedActive": "Blocked/restricted asset still in use",
+      "noDocs": "Asset without documentation", "noRelationships": "Asset with no relationships",
+      "problematicStatus": "Asset with a problematic status", "empty": "No risk alerts right now."
+    }
+  },
+  "settings": { "description": "Asset inventory, health, and risk tracking for your operation." },
+  "common": { "loading": "Loading...", "error": "Something went wrong.", "retry": "Retry", "save": "Save", "cancel": "Cancel", "delete": "Delete", "close": "Close" }
+}
