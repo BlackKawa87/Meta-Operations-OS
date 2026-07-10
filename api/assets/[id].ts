@@ -14,7 +14,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'GET') {
       const { data, error } = await supabase
         .from('assets')
-        .select('*, asset_types(key, label_en, label_pt, label_es, icon, category, fields)')
+        .select('*, asset_types(key, label_en, label_pt, label_es, icon, category, fields, roles)')
         .eq('id', id)
         .single();
       if (error) throw new HttpError(404, 'Asset not found');
