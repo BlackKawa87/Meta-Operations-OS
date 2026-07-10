@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sendError, methodGuard } from '../../_lib/http';
-import { getServiceClient } from '../../_lib/supabaseServer';
+import { sendError, methodGuard } from '../../_lib/http.js';
+import { getServiceClient } from '../../_lib/supabaseServer.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!methodGuard(req, res, ['GET'])) return;

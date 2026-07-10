@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sendError, methodGuard } from '../_lib/http';
-import { getServiceClient } from '../_lib/supabaseServer';
-import { DEFAULT_WORKSPACE_ID } from '../_lib/config';
+import { sendError, methodGuard } from '../_lib/http.js';
+import { getServiceClient } from '../_lib/supabaseServer.js';
+import { DEFAULT_WORKSPACE_ID } from '../_lib/config.js';
 
 const PROBLEMATIC_STATUSES = ['blocked', 'restricted', 'suspended', 'disabled', 'at_risk', 'limited', 'needs_verification'];
 

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { AssetRow } from '../../src/types/database';
-import { computeAssetScores } from '../../src/lib/scoring';
+import type { AssetRow } from '../../src/types/database.js';
+import { computeAssetScores } from '../../src/lib/scoring.js';
 
 // Recalculates and persists the score snapshot for one asset: writes the
 // denormalized current values on `assets` and appends a row to

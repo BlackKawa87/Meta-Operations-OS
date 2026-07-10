@@ -1,9 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sendError, methodGuard, HttpError } from '../_lib/http';
-import { getServiceClient } from '../_lib/supabaseServer';
-import { DEFAULT_WORKSPACE_ID } from '../_lib/config';
-import { createAssetSchema } from '../../src/lib/validation/asset';
-import { recomputeAssetScores } from '../_lib/recompute';
+import { sendError, methodGuard, HttpError } from '../_lib/http.js';
+import { getServiceClient } from '../_lib/supabaseServer.js';
+import { DEFAULT_WORKSPACE_ID } from '../_lib/config.js';
+import { createAssetSchema } from '../../src/lib/validation/asset.js';
+import { recomputeAssetScores } from '../_lib/recompute.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!methodGuard(req, res, ['GET', 'POST'])) return;

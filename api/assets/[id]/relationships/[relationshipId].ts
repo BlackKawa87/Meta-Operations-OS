@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sendError, methodGuard, HttpError } from '../../../_lib/http';
-import { getServiceClient } from '../../../_lib/supabaseServer';
-import { recomputeAssetScores } from '../../../_lib/recompute';
+import { sendError, methodGuard, HttpError } from '../../../_lib/http.js';
+import { getServiceClient } from '../../../_lib/supabaseServer.js';
+import { recomputeAssetScores } from '../../../_lib/recompute.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!methodGuard(req, res, ['DELETE'])) return;

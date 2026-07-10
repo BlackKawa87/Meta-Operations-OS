@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { sendError, methodGuard, HttpError } from '../../_lib/http';
-import { getServiceClient } from '../../_lib/supabaseServer';
-import { createAssetDocumentSchema } from '../../../src/lib/validation/asset';
-import { recomputeAssetScores } from '../../_lib/recompute';
+import { sendError, methodGuard, HttpError } from '../../_lib/http.js';
+import { getServiceClient } from '../../_lib/supabaseServer.js';
+import { createAssetDocumentSchema } from '../../../src/lib/validation/asset.js';
+import { recomputeAssetScores } from '../../_lib/recompute.js';
 
 // Body size for base64-encoded uploads is capped by Vercel's default
 // serverless request body limit (~4.5MB) — fine for the documents this
