@@ -2,6 +2,24 @@
 
 All notable changes to Meta Operations OS are documented here. Format loosely follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.1.0] - 2026-07-10 — "Foundation + Asset Manager"
+
+First official release. GitHub repository (`BlackKawa87/Meta-Operations-OS`) and Vercel project (`meta-operations-os`) created and connected; production deployment live at `https://meta-operations-os.vercel.app`; Supabase migrations applied to the production database.
+
+### Added — Go Live
+- Dedicated GitHub repository, initial commit, and a clean, isolated local Git history (separate from the developer's other unrelated repositories).
+- Vercel project created and linked, connected to the GitHub repository, with `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `DEFAULT_WORKSPACE_ID` configured as production environment variables.
+- All 9 Supabase migrations applied to the production database (33 seeded asset types, default workspace, Storage bucket).
+
+### Fixed — found during Go Live Validation, real production bugs
+- **Vercel Functions failed at runtime with `FUNCTION_INVOCATION_FAILED`** on first deploy: `package.json` declares `"type": "module"`, so Vercel's Node runtime resolves relative imports as native ESM, which requires explicit `.js` extensions — our imports (written for Vite's bundler-mode resolution, which allows extensionless imports) didn't have them. Added `.js` to every relative import under `api/**`.
+- A second build error surfaced once imports were fixed: `src/lib/scoring.ts` used the `@/types/database` path alias, which Vercel's per-function type-check doesn't resolve for files pulled in transitively (it's a Vite-only alias). Changed to a relative import.
+- **Every dynamic `/api/assets/:id*` route (bare id, relationships, notes, documents, history, events, audit) silently returned `index.html` instead of JSON**, because `vercel.json`'s own rewrite rules were inserted ahead of Vercel's auto-generated dynamic API routes in the compiled routing config, and the SPA catch-all matched those paths first. Fixed by scoping the SPA fallback rewrite to exclude `/api/*` (`"/((?!api/).*)"`) instead of rewriting `/api/*` explicitly (which was redundant — Vercel routes to functions automatically). Verified by testing every affected endpoint directly against the live deployment after the fix.
+- Along the way, also renamed `api/assets/[id]/index.ts` to `api/assets/[id].ts` (Vercel doesn't treat `dir/index.ts` as equivalent to `dir.ts` the way some frameworks do) — this alone didn't fix the routing issue, the `vercel.json` fix did, but it's the correct convention regardless.
+
+### Validated
+- Full end-to-end write path tested against production: created a test asset via `POST /api/assets`, confirmed automatic score computation, status history, event timeline, and audit log all fired correctly; verified in the browser (Dashboard, Asset Detail, all 8 tabs) with zero console errors in light and dark mode; archived the test asset afterward to leave the database in a clean state (0 assets).
+
 ## [Unreleased]
 
 ### Changed — Single Operator Mode cleanup and finalization
