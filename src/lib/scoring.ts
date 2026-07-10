@@ -1,4 +1,7 @@
-import type { AssetStatus, Criticality } from '@/types/database';
+// Relative import, not the `@/` alias: this file is also reachable from
+// api/_lib/recompute.ts, and Vercel's function type-check doesn't resolve
+// our Vite-only path alias for files pulled in transitively.
+import type { AssetStatus, Criticality } from '../types/database.js';
 
 const PROBLEMATIC_STATUSES: AssetStatus[] = [
   'blocked', 'restricted', 'suspended', 'disabled', 'at_risk', 'limited', 'needs_verification',
